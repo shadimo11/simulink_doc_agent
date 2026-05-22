@@ -1,0 +1,49 @@
+# ==========================================
+# Security & Environment Boundaries
+# ==========================================
+.env
+.env.*
+venv/
+.venv/
+env/
+Miniconda*/
+
+# ==========================================
+# Python & Caching Artifacts
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# ==========================================
+# AI & Vector Database Storage
+# ==========================================
+chroma_db/
+chroma/
+*.sqlite3
+
+# ==========================================
+# MATLAB & Simulink Compilation Artifacts
+# ==========================================
+slprj/
+*.asv
+*.mexw64
+*.mexa64
+*.slxc
+*.autosave
+
+# ==========================================
+# Generated Data & Extraction Payloads
+# ==========================================
+*_ast.json
+data/outputs/*
+!data/outputs/.gitkeep
+
+# ==========================================
+# OS & IDE Configurations
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

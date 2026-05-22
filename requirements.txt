@@ -1,0 +1,33 @@
+# ==============================================================================
+# SIMULINK DOC AGENT - PIPELINE DEPENDENCIES
+# Target Environment: Python 3.11 / 3.12 | MATLAB R2024b
+# ==============================================================================
+
+# Core System Interoperability
+# Note: Pinned directly to the MATLAB R2024b (Release 24.2) execution loop
+matlabengine>=24.2.0,<24.3.0
+
+# Data Validation & Schema Enforcement
+pydantic>=2.6.0,<3.0.0
+pyyaml>=6.0.1
+
+# Document Generation & Templating
+jinja2>=3.1.3
+
+# Agent Framework & LLM Interface Orchestration
+langchain-core>=0.1.30
+langchain-community>=0.0.28
+langchain-openai>=0.1.0
+
+# Information Retrieval & High-Performance Vector Databases
+chromadb>=0.4.24
+tiktoken>=0.6.0
+
+# Asynchronous API Layer
+fastapi>=0.110.0
+uvicorn>=0.28.0
+
+# Quality Assurance & Validation Pipelines
+pytest>=8.1.1
+black>=24.2.0
+flake8>=7.0.0
