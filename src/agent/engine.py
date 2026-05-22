@@ -44,7 +44,7 @@ class SimulinkAgentEngine:
         
         # Explicitly passing the API key overrides LangChain's local disk lookup fallback
         self.embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/gemini-embedding-001",
+            model=os.getenv("EMBEDDING_MODEL_ID"),
             google_api_key=api_key
         )
         
@@ -63,7 +63,7 @@ class SimulinkAgentEngine:
         
         print("[INFO] Spawning reasoning model (gemini-1.5-flash)...")
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash", 
+            model=os.getenv("REASONING_MODEL_ID"), 
             temperature=0.1,
             google_api_key=api_key
         )
