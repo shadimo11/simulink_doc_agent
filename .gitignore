@@ -2,7 +2,6 @@
 # Security & Environment Boundaries
 # ==========================================
 .env
-.env.*
 venv/
 .venv/
 env/
