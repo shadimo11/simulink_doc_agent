@@ -11,8 +11,8 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_chroma import Chroma
 
-from ingestion import SimulinkDocumentIngestor
-from prompts import QA_PROMPT
+from .ingestion import SimulinkDocumentIngestor
+from .prompts import QA_PROMPT
 
 # Calculate project root dynamically
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -30,7 +30,7 @@ os.environ['SSL_CERT_FILE'] = certifi.where()
 os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 print(f"[INFO] TLS/SSL Trust Chain secured via certifi at: {certifi.where()}")
 
-# Strict boundary validation
+# Strict boundary validation for API Key
 api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
     print("[FATAL] GOOGLE_API_KEY environment variable missing or unreadable within .env structure.")
@@ -40,11 +40,22 @@ if not api_key:
 class SimulinkAgentEngine:
     def __init__(self, markdown_path: str):
         """Initializes the RAG pipeline by embedding documents into a local vector store."""
-        print("[INFO] Initializing Gemini Embedding Model (text-embedding-004)...")
+        
+        # 1. Strictly pull and validate environment variables
+        embed_model = os.getenv("EMBEDDING_MODEL_ID")
+        reasoning_model = os.getenv("REASONING_MODEL_ID")
+        
+        if not embed_model or not reasoning_model:
+            raise RuntimeError(
+                "[FATAL] Missing model identifiers in .env file. "
+                "Ensure EMBEDDING_MODEL_ID and REASONING_MODEL_ID are defined."
+            )
+
+        print(f"[INFO] Initializing Gemini Embedding Model ({embed_model})...")
         
         # Explicitly passing the API key overrides LangChain's local disk lookup fallback
         self.embeddings = GoogleGenerativeAIEmbeddings(
-            model=os.getenv("EMBEDDING_MODEL_ID"),
+            model=embed_model,
             google_api_key=api_key
         )
         
@@ -61,9 +72,9 @@ class SimulinkAgentEngine:
         # Configure retriever to gather the top relevant blocks based on cosine similarity
         self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 2})
         
-        print("[INFO] Spawning reasoning model (gemini-1.5-flash)...")
+        print(f"[INFO] Spawning reasoning model ({reasoning_model})...")
         self.llm = ChatGoogleGenerativeAI(
-            model=os.getenv("REASONING_MODEL_ID"), 
+            model=reasoning_model, 
             temperature=0.1,
             google_api_key=api_key
         )
