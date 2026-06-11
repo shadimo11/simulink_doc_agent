@@ -67,10 +67,20 @@ class SimulinkSubsystem(BaseModel):
     child_subsystems: List['SimulinkSubsystem'] = Field(default_factory=list)
     lines: List[SignalLine] = Field(default_factory=list)
 
+class ModelConfiguration(BaseModel):
+    """Global solver, hardware, and lifecycle callback settings."""
+    solver: str = Field(default="Unknown")
+    step_size: str = Field(default="auto")
+    system_target_file: str = Field(default="grt.tlc", description="Code generation target (e.g., ert.tlc)")
+    hardware_board: str = Field(default="None", description="Target hardware (e.g., Arduino Uno)")
+    init_fcn: str = Field(default="", description="MATLAB code executed before simulation starts")
+    stop_fcn: str = Field(default="", description="MATLAB code executed after simulation ends")
+
 class ModelAST(BaseModel):
     """The root Abstract Syntax Tree payload exported by the toolchain."""
     toolchain_version: str = "1.0.0"
     target_model: str
+    configuration: ModelConfiguration
     root_hierarchy: SimulinkSubsystem
 
 # Resolve recursive references for Pydantic v2

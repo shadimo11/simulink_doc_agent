@@ -13,7 +13,8 @@ from .schemas import (
     StateflowChart, 
     StateflowState, 
     StateflowTransition, 
-    StateflowVariable
+    StateflowVariable,
+    ModelConfiguration
 )
 
 class SimulinkExtractionEngine:
@@ -79,24 +80,44 @@ class SimulinkExtractionEngine:
 
     def extract_block(self, block_path: str) -> SimulinkBlock:
         """
-        Extracts standard synchronous parameters and asynchronous dashboard bindings 
-        into a validated Pydantic model.
+        Extracts standard synchronous parameters, asynchronous dashboard bindings, 
+        and dynamic Mask variables for hardware support packages.
         """
         block_type = str(self.eng.get_param(block_path, "BlockType"))
         name = str(self.eng.get_param(block_path, "Name"))
         
         parameters = {}
-        b_type_lower = block_type.lower()
         
-        # 1. Standard Synchronous Blocks
-        if b_type_lower == "gain":
+        # --- 1. DYNAMIC MASK EXTRACTION (Hardware Support Packages) ---
+        try:
+            # INTERCEPT: Override generic types with human-readable Mask Types
+            mask_type = str(self.eng.get_param(block_path, "MaskType"))
+            if mask_type and mask_type.strip():
+                block_type = mask_type  # e.g., changes "MATLABSystem" to "Arduino Digital Input"
+
+            # Check if the block has a custom Mask (e.g., Arduino/ESP32 blocks)
+            has_mask = self.eng.get_param(block_path, "Mask")
+            if has_mask == 'on':
+                mask_names = self.eng.get_param(block_path, "MaskNames")
+                mask_values = self.eng.get_param(block_path, "MaskValues")
+                
+                # Zip the names and values together into the dictionary
+                if mask_names and mask_values:
+                    for m_name, m_val in zip(mask_names, mask_values):
+                        parameters[str(m_name)] = str(m_val)
+        except Exception:
+            pass # Block is not masked, proceed normally
+            
+        b_type_lower = block_type.lower()
+
+        # --- 2. STANDARD SYNCHRONOUS FALLBACKS ---
+        if b_type_lower == "gain" and "Gain" not in parameters:
             parameters["Gain"] = str(self.eng.get_param(block_path, "Gain"))
-        elif b_type_lower == "constant":
+        elif b_type_lower == "constant" and "Value" not in parameters:
             parameters["Value"] = str(self.eng.get_param(block_path, "Value"))
             
-        # 2. Asynchronous Dashboard / HMI Blocks
+        # --- 3. ASYNCHRONOUS DASHBOARD / HMI BLOCKS ---
         ui_keywords = ["knob", "switch", "lamp", "gauge", "dashboard", "hmi"]
-        
         if any(keyword in b_type_lower for keyword in ui_keywords):
             try:
                 binding_obj = self.eng.get_param(block_path, "Binding")
@@ -106,7 +127,6 @@ class SimulinkExtractionEngine:
                     state_name = self.eng.get_param(block_path, "StateName")
                     parameters["StateName"] = str(state_name)
                 except Exception as e:
-                    print(f"[WARN] Dashboard block '{name}' is unbound or inaccessible: {e}")
                     parameters["Binding"] = "Unresolved"
                     
         return SimulinkBlock(
@@ -114,6 +134,27 @@ class SimulinkExtractionEngine:
             block_type=block_type,
             path=str(block_path),
             parameters=parameters
+        )
+
+    def extract_configuration(self) -> ModelConfiguration:
+        """Extracts active solver settings, code generation targets, and callbacks."""
+        print("[PARSE] Extracting global model configuration...")
+        
+        # Helper function to safely get parameters that might not exist
+        def safe_get(param_name: str, default: str = "") -> str:
+            try:
+                val = self.eng.get_param(self.model_name, param_name)
+                return str(val) if val else default
+            except Exception:
+                return default
+
+        return ModelConfiguration(
+            solver=safe_get("Solver", "Unknown"),
+            step_size=safe_get("FixedStep", "auto"),
+            system_target_file=safe_get("SystemTargetFile", "Unknown"),
+            hardware_board=safe_get("HardwareBoard", "None"),
+            init_fcn=safe_get("InitFcn", ""),
+            stop_fcn=safe_get("StopFcn", "")
         )
 
     def extract_chart(self, chart_path: str) -> StateflowChart:
@@ -295,12 +336,15 @@ class SimulinkExtractionEngine:
 
     def extract_model(self) -> dict:
         """Wraps the recursively traversed root into the final AST payload."""
+        # Extract global config
+        config = self.extract_configuration()
+        # Extract topology
         root_data = self.traverse_subsystem(self.model_name)
         
-        # Updated for Pydantic V2 compliance
         return {
             "toolchain_version": "1.0.0",
             "target_model": self.model_name,
+            "configuration": config.model_dump() if hasattr(config, 'model_dump') else config.__dict__,
             "root_hierarchy": root_data.model_dump() if hasattr(root_data, 'model_dump') else root_data
         }
 

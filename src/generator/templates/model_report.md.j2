@@ -3,6 +3,22 @@
 
 ---
 
+## 0. Global Model Configuration
+
+**Simulation & Solver Settings:**
+* **Solver:** `{{ configuration.solver }}`
+* **Step Size:** `{{ configuration.step_size }}`
+
+**Hardware & Code Generation:**
+* **System Target File:** `{{ configuration.system_target_file }}`
+* **Hardware Board:** `{{ configuration.hardware_board }}`
+
+**Lifecycle Callbacks (Workspace Logic):**
+* **InitFcn:** `{{ configuration.init_fcn or 'None' }}`
+* **StopFcn:** `{{ configuration.stop_fcn or 'None' }}`
+
+---
+
 ## 1. System Interfaces (Root Ports)
 
 | Port Direction | Signal Name | Data Type | Dimensions |
