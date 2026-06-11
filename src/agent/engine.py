@@ -13,6 +13,7 @@ from langchain_chroma import Chroma
 
 from .ingestion import SimulinkDocumentIngestor
 from .prompts import QA_PROMPT
+from .indexer import VectorIndexManager
 
 # Calculate project root dynamically
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -39,39 +40,25 @@ if not api_key:
 
 class SimulinkAgentEngine:
     def __init__(self, markdown_path: str):
-        """Initializes the RAG pipeline by embedding documents into a local vector store."""
-        
         # 1. Strictly pull and validate environment variables
         embed_model = os.getenv("EMBEDDING_MODEL_ID")
         reasoning_model = os.getenv("REASONING_MODEL_ID")
         
         if not embed_model or not reasoning_model:
-            raise RuntimeError(
-                "[FATAL] Missing model identifiers in .env file. "
-                "Ensure EMBEDDING_MODEL_ID and REASONING_MODEL_ID are defined."
-            )
+            raise RuntimeError("[FATAL] Missing model identifiers in .env file.")
 
+        # 2. Initialize Embeddings
         print(f"[INFO] Initializing Gemini Embedding Model ({embed_model})...")
-        
-        # Explicitly passing the API key overrides LangChain's local disk lookup fallback
         self.embeddings = GoogleGenerativeAIEmbeddings(
             model=embed_model,
             google_api_key=api_key
         )
         
-        # Ingest and chunk the generated documentation
-        ingestor = SimulinkDocumentIngestor()
-        chunks = ingestor.load_and_split(markdown_path)
+        # 3. Delegate Database Operations to the Indexer
+        self.indexer = VectorIndexManager(self.embeddings)
+        self.retriever = self.indexer.build_in_memory_index(markdown_path)
         
-        print("[INFO] Computing vector math and spinning up in-memory Chroma database...")
-        self.vector_store = Chroma.from_documents(
-            documents=chunks,
-            embedding=self.embeddings
-        )
-        
-        # Configure retriever to gather the top relevant blocks based on cosine similarity
-        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 2})
-        
+        # 4. Initialize Reasoning Engine
         print(f"[INFO] Spawning reasoning model ({reasoning_model})...")
         self.llm = ChatGoogleGenerativeAI(
             model=reasoning_model, 
@@ -79,7 +66,7 @@ class SimulinkAgentEngine:
             google_api_key=api_key
         )
         
-        # Build the functional execution chain
+        # 5. Build Execution Chain
         self.chain = (
             {"context": self.retriever | self._format_docs, "input": RunnablePassthrough()}
             | QA_PROMPT
