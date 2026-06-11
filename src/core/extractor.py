@@ -6,7 +6,7 @@ import matlab.engine
 import json
 
 # Ensure you have your Pydantic models defined in schemas.py
-from schemas import (
+from .schemas import (
     SimulinkBlock, 
     SimulinkSubsystem, 
     PortInterface, 
@@ -204,6 +204,48 @@ class SimulinkExtractionEngine:
             transitions=transitions
         )
 
+    def extract_topology(self, current_scope: str) -> list:
+        """
+        Uses an internal MATLAB script to safely parse PortConnectivity structs
+        and serialize the graph edges into a JSON string to bypass IPC limits.
+        """
+        script = """
+        blks = find_system(scope, 'SearchDepth', 1, 'Type', 'block');
+        blks = blks(~strcmp(blks, scope)); % Exclude the subsystem root itself
+        conns = {};
+        for i = 1:length(blks)
+            blk = blks{i};
+            try
+                pc = get_param(blk, 'PortConnectivity');
+                blk_name = get_param(blk, 'Name');
+                for j = 1:length(pc)
+                    port = pc(j);
+                    if ~isempty(port.DstBlock)
+                        for k = 1:length(port.DstBlock)
+                            dst_name = get_param(port.DstBlock(k), 'Name');
+                            % Create an edge dictionary
+                            edge = struct('source_block', blk_name, 'source_port', port.Type, 'destination_block', dst_name);
+                            conns{end+1} = edge;
+                        end
+                    end
+                end
+            catch
+                % Ignore blocks that do not support standard PortConnectivity
+            end
+        end
+        res_json = jsonencode(conns);
+        """
+        self.eng.workspace['scope'] = current_scope
+        self.eng.eval(script, nargout=0)
+        
+        raw_json = str(self.eng.workspace['res_json'])
+        
+        # If the JSON is valid and not empty ('[]'), parse it into Pydantic-ready dicts
+        import json
+        if raw_json and raw_json != "[]":
+            return json.loads(raw_json)
+        return []
+
     def traverse_subsystem(self, current_scope: str) -> SimulinkSubsystem:
         """Recursively maps the directed acyclic graph into Pydantic containers."""
         print(f"[PARSE] Mapping hierarchy: {current_scope}")
@@ -240,13 +282,15 @@ class SimulinkExtractionEngine:
             else:
                 blocks.append(self.extract_block(block))
                 
+        topology = self.extract_topology(current_scope)
         return SimulinkSubsystem(
             name=str(self.eng.get_param(current_scope, "Name")),
             path=str(current_scope),
             ports=ports,
             blocks=blocks,
             charts=charts,
-            child_subsystems=child_subsystems
+            child_subsystems=child_subsystems,
+            lines=topology
         )
 
     def extract_model(self) -> dict:

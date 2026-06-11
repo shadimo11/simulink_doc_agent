@@ -58,3 +58,28 @@
 {% else %}
 *No child subsystems detected at the root level.*
 {% endfor %}
+
+{% for sub in root_hierarchy.child_subsystems %}
+### Subsystem: {{ sub.name }}
+*Path: `{{ sub.path }}`*
+
+| Block Name | Type | Key Parameters |
+| :--- | :--- | :--- |
+{% for block in sub.blocks %}
+| **{{ block.name }}** | {{ block.block_type }} | `{{ block.parameters }}` |
+{% endfor %}
+
+#### Topological Connections
+{% if sub.lines %}
+| Source Block | Port Type | Destination Block |
+| :--- | :--- | :--- |
+{% for line in sub.lines %}
+| `{{ line.source_block }}` | `{{ line.source_port }}` | `{{ line.destination_block }}` |
+{% endfor %}
+{% else %}
+*No topological connections detected.*
+{% endif %}
+
+{% else %}
+*No child subsystems detected at the root level.*
+{% endfor %}

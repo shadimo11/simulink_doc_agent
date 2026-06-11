@@ -1,4 +1,5 @@
 import sys
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -13,8 +14,12 @@ sys.path.append(str(PROJECT_ROOT))
 
 from src.agent.engine import SimulinkAgentEngine
 
-# Target Document
-TARGET_MD = PROJECT_ROOT / "data" / "outputs" / "untitled1_documentation.md"
+# Read from environment, fallback to default if not provided
+env_md_path = os.getenv("TARGET_MD_PATH")
+if env_md_path:
+    TARGET_MD = Path(env_md_path)
+else:
+    TARGET_MD = PROJECT_ROOT / "data" / "outputs" / "untitled1_documentation.md"
 
 # Global memory reference for the singleton Agent
 agent_singleton = None

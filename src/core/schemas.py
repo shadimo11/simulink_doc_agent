@@ -49,6 +49,12 @@ class StateflowChart(BaseModel):
     states: List[StateflowState] = Field(default_factory=list)
     transitions: List[StateflowTransition] = Field(default_factory=list)
 
+class SignalLine(BaseModel):
+    """Represents a topological connection (wire) between two blocks."""
+    source_block: str
+    source_port: str
+    destination_block: str
+
 class SimulinkSubsystem(BaseModel):
     """
     A recursive container representing architectural hierarchy.
@@ -59,6 +65,7 @@ class SimulinkSubsystem(BaseModel):
     blocks: List[SimulinkBlock] = Field(default_factory=list)
     charts: List[StateflowChart] = Field(default_factory=list)
     child_subsystems: List['SimulinkSubsystem'] = Field(default_factory=list)
+    lines: List[SignalLine] = Field(default_factory=list)
 
 class ModelAST(BaseModel):
     """The root Abstract Syntax Tree payload exported by the toolchain."""
