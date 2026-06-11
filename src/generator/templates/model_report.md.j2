@@ -3,7 +3,7 @@
 
 ---
 
-## 1. System Interfaces
+## 1. System Interfaces (Root Ports)
 
 | Port Direction | Signal Name | Data Type | Dimensions |
 | :--- | :--- | :--- | :--- |
@@ -16,7 +16,8 @@
 ## 2. Finite State Machines (Stateflow)
 
 {% for chart in root_hierarchy.charts %}
-### 2.{{ loop.index }} Chart: {{ chart.name }}
+### Chart: {{ chart.name }}
+*Path: `{{ chart.path }}`*
 
 **Variables:**
 {% for var in chart.variables %}
@@ -32,7 +33,6 @@
 {% endfor %}
 
 **State Transitions:**
-
 | Source | Target | Trigger / Condition |
 | :--- | :--- | :--- |
 {% for trans in chart.transitions %}
@@ -43,33 +43,46 @@
 *No Stateflow charts detected at the root level.*
 {% endfor %}
 
-## 3. Subsystem Topologies
+## 3. Root Architecture (Top-Level)
 
-{% for sub in root_hierarchy.child_subsystems %}
-### Subsystem: {{ sub.name }}
-*Path: `{{ sub.path }}`*
-
+### Functional Blocks
+{% if root_hierarchy.blocks %}
 | Block Name | Type | Key Parameters |
 | :--- | :--- | :--- |
-{% for block in sub.blocks %}
+{% for block in root_hierarchy.blocks %}
 | **{{ block.name }}** | {{ block.block_type }} | `{{ block.parameters }}` |
 {% endfor %}
-
 {% else %}
-*No child subsystems detected at the root level.*
+*No discrete blocks detected at the root level.*
+{% endif %}
+
+### Topological Connections
+{% if root_hierarchy.lines %}
+| Source Block | Port Type | Destination Block |
+| :--- | :--- | :--- |
+{% for line in root_hierarchy.lines %}
+| `{{ line.source_block }}` | `{{ line.source_port }}` | `{{ line.destination_block }}` |
 {% endfor %}
+{% else %}
+*No top-level topological connections detected.*
+{% endif %}
+
+## 4. Subsystem Architectures
 
 {% for sub in root_hierarchy.child_subsystems %}
 ### Subsystem: {{ sub.name }}
 *Path: `{{ sub.path }}`*
 
+**Functional Blocks:**
 | Block Name | Type | Key Parameters |
 | :--- | :--- | :--- |
 {% for block in sub.blocks %}
 | **{{ block.name }}** | {{ block.block_type }} | `{{ block.parameters }}` |
+{% else %}
+| N/A | Empty Subsystem | - |
 {% endfor %}
 
-#### Topological Connections
+**Topological Connections:**
 {% if sub.lines %}
 | Source Block | Port Type | Destination Block |
 | :--- | :--- | :--- |
@@ -77,9 +90,10 @@
 | `{{ line.source_block }}` | `{{ line.source_port }}` | `{{ line.destination_block }}` |
 {% endfor %}
 {% else %}
-*No topological connections detected.*
+*No internal topological connections detected.*
 {% endif %}
 
+---
 {% else %}
-*No child subsystems detected at the root level.*
+*No child subsystems detected in the model.*
 {% endfor %}
