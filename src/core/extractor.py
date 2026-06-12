@@ -90,10 +90,10 @@ class SimulinkExtractionEngine:
         
         # --- 1. DYNAMIC MASK EXTRACTION (Hardware Support Packages) ---
         try:
-            # INTERCEPT: Override generic types with human-readable Mask Types
+            # Override generic types with human-readable Mask Types
             mask_type = str(self.eng.get_param(block_path, "MaskType"))
             if mask_type and mask_type.strip():
-                block_type = mask_type  # e.g., changes "MATLABSystem" to "Arduino Digital Input"
+                block_type = mask_type  # Displays special blocks with their name not "MATLABSystem"
 
             # Check if the block has a custom Mask (e.g., Arduino/ESP32 blocks)
             has_mask = self.eng.get_param(block_path, "Mask")
